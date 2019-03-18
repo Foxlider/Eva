@@ -5,15 +5,16 @@ using Tweetinvi;
 using Tweetinvi.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using EDPostcards.Services;
+using Eva.Services;
 using System.Threading.Tasks;
 
-namespace EDPostcards
+namespace Eva
 {
-    public class EDPostcards
+    public class Eva
     {
         private IAuthenticationContext _authenticationContext;
         private IServiceProvider services;
+        public static Random rand = new Random();
         internal static int logLvl = 3;
 
         static void Main(string[] args) => RunAsync(args).GetAwaiter().GetResult();
@@ -21,11 +22,11 @@ namespace EDPostcards
         public static async Task RunAsync(string[] args)
         {
             AppDomain.CurrentDomain.ProcessExit += new EventHandler(CurrentDomain_ProcessExit);
-            var EDPostcards = new EDPostcards(args);
-            await EDPostcards.RunAsync();
+            var Eva = new Eva(args);
+            await Eva.RunAsync();
         }
 
-        public EDPostcards(string[] args)
+        public Eva(string[] args)
         {
             IServiceCollection serviceCollection = new ServiceCollection();
             ConfigureServices(serviceCollection);
@@ -46,16 +47,13 @@ namespace EDPostcards
                 $"____________\n", "EDPostcard start");
 
             // Set up your credentials (https://apps.twitter.com)
-            ITwitterCredentials creds = new TwitterCredentials("kpdduMJ1YIuXdanBYZddw8Z0f",
-                "Do1MRHot62rVIWK5YbkzlaG5ffS09IB0keV7Lvq99yvYDu5wDT",
-                "852893965858820101-5NlnPbgMqHxbjG4EOHHp01cVYgENIqW",
-                "TtjyVtDlIiqTYgwyCe3DiNU9zdBmZpRwSm7tCkCgT97Q8");
+            ITwitterCredentials creds = GetCredencials();
             Auth.SetCredentials(creds);
             Auth.ApplicationCredentials = creds;
             RateLimit.RateLimitTrackerMode = RateLimitTrackerMode.TrackAndAwait;
 
             var authenticatedUser = User.GetAuthenticatedUser();
-            Log.Message(Log.info,
+            Log.Message(Log.neutral,
                 $"{authenticatedUser.Name} is connected :\n" +
                 $"  _____________\n" +
                 $"  ScreenName  : @{authenticatedUser.ScreenName}\n" +
@@ -80,12 +78,12 @@ namespace EDPostcards
                 stream.MatchingTweetReceived += (sender, args) =>
                 {
                     var tweet = args.Tweet;
-                    if (!tweet.IsRetweet                            //  NOT A RETWEET
-                        && tweet.InReplyToStatusId == null          //  NOT A REPLY
-                        && tweet.CreatedBy.Id != user.Id            //  NOT SENT BY THE BOT
-                        && tweet.Media.Count > 0)                   //  MEDIAS INSIDE
-                    { Log.Message(Log.neutral, $"{tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", Thread.CurrentThread.Name); }
-                    Log.Message(Log.neutral, "A tweet containing 'ED Postcards' has been found; the tweet is '" + args.Tweet + "'", Thread.CurrentThread.Name);
+                    Log.Message(Log.neutral, "A tweet containing 'ED Postcards' has been found; the tweet is '" + args.Tweet + "'", "StreamListener");
+                    if (TweetService.CheckTweet(tweet, user))
+                    {
+                        Log.Message(Log.neutral, $"{tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", "StreamListener");
+                        TweetService.SendTweet(tweet);
+                    }
                 };
                 stream.StartStreamMatchingAnyCondition();
 
@@ -94,6 +92,14 @@ namespace EDPostcards
 
             t.Join();
             await Task.Delay(-1);
+        }
+
+        public static ITwitterCredentials GetCredencials()
+        {
+            return new TwitterCredentials("kpdduMJ1YIuXdanBYZddw8Z0f",
+                "Do1MRHot62rVIWK5YbkzlaG5ffS09IB0keV7Lvq99yvYDu5wDT",
+                "852893965858820101-5NlnPbgMqHxbjG4EOHHp01cVYgENIqW",
+                "TtjyVtDlIiqTYgwyCe3DiNU9zdBmZpRwSm7tCkCgT97Q8");
         }
 
         /// <summary>
@@ -113,7 +119,7 @@ namespace EDPostcards
         /// <param name="serviceCollection"></param>
         private static void ConfigureServices(IServiceCollection serviceCollection)
         {
-            serviceCollection.AddSingleton(new TweetHandlerService());
+            serviceCollection.AddSingleton(new TweetService());
             serviceCollection.AddSingleton(new LoggingService());
         }
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace EDPostcards.Services
+namespace Eva.Services
 {
     class LoggingService
     {
@@ -40,6 +40,8 @@ namespace EDPostcards.Services
         /// <param name="source">Message's source</param>
         public static void Message(int Severity, string message, string source = "")
         {
+            if (source == null)
+            { source = ""; }
             switch (Severity)
             {
                 case 0:
@@ -75,7 +77,7 @@ namespace EDPostcards.Services
         /// <param name="source"></param>
         public static void Debug(string message, string source = "")
         {
-            if (EDPostcards.logLvl >= 5)
+            if (Eva.logLvl >= 5)
             {
                 Console.ForegroundColor = ConsoleColor.Blue;
                 string Severity = "Debug".PadRight(8);
@@ -93,7 +95,7 @@ namespace EDPostcards.Services
         /// <param name="source"></param>
         public static void Verbose(string message, string source = "")
         {
-            if (EDPostcards.logLvl >= 4)
+            if (Eva.logLvl >= 4)
             {
                 Console.ForegroundColor = ConsoleColor.Gray;
                 string Severity = "Verbose".PadRight(8);
@@ -111,7 +113,7 @@ namespace EDPostcards.Services
         /// <param name="source"></param>
         public static void Error(string message, string source = "")
         {
-            if (EDPostcards.logLvl >= 1)
+            if (Eva.logLvl >= 1)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 string Severity = "Error".PadRight(8);
@@ -129,7 +131,7 @@ namespace EDPostcards.Services
         /// <param name="source"></param>
         public static void Critical(string message, string source = "")
         {
-            if (EDPostcards.logLvl >= 0)
+            if (Eva.logLvl >= 0)
             {
                 Console.ForegroundColor = ConsoleColor.DarkRed;
                 string Severity = "Critical".PadRight(8);
@@ -147,7 +149,7 @@ namespace EDPostcards.Services
         /// <param name="source"></param>
         public static void Information(string message, string source = "")
         {
-            if (EDPostcards.logLvl >= 3)
+            if (Eva.logLvl >= 3)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 string Severity = "Info".PadRight(8);
@@ -165,7 +167,7 @@ namespace EDPostcards.Services
         /// <param name="source"></param>
         public static void Warning(string message, string source = "")
         {
-            if (EDPostcards.logLvl >= 2)
+            if (Eva.logLvl >= 2)
             {
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
                 string Severity = "Warning".PadRight(8);
