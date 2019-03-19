@@ -38,6 +38,13 @@ namespace Eva.Services
             "I have one word only in mind : Incredible.",
             "I have one word only in mind : Splendid."
         };
+
+        /// <summary>
+        /// Check if a Tweet should be handled
+        /// </summary>
+        /// <param name="tweet">Tweet to check</param>
+        /// <param name="user">The current bot user</param>
+        /// <returns>Boolean</returns>
         public static bool CheckTweet(ITweet tweet, IUser user)
         {
             if (!tweet.IsRetweet                            //  NOT A RETWEET
@@ -74,7 +81,6 @@ namespace Eva.Services
                     Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name));
                 client.DownloadFile(new Uri(media.MediaURLHttps), Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date.ToString("dd_MM_yyyy_HH-mm-ss")}--{Eva.rand.Next(1000, 9999)}.jpg"));
             }
-                
         }
     }
 }

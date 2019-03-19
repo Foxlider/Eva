@@ -15,7 +15,7 @@ namespace Tests
         public void Setup()
         {
             
-            ITwitterCredentials creds = Eva.Eva.GetCredencials();
+            ITwitterCredentials creds = Eva.Eva.GetTwitterCredencials();
             Auth.SetCredentials(creds);
             Auth.ApplicationCredentials = creds;
         }

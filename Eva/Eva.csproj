@@ -5,10 +5,15 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <StartupObject>Eva.Eva</StartupObject>
     <Company>FoxliCorp</Company>
+    <Version>1.2</Version>
+    <Description>Eva is the bot written in C# to replace the current EDPostcards_BOT.py</Description>
+    <Copyright>FoxlyCorp</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Discord.Net" Version="2.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
     <PackageReference Include="TweetinviAPI" Version="4.0.0" />
   </ItemGroup>
