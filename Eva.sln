@@ -5,7 +5,13 @@ VisualStudioVersion = 16.0.28711.60
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eva", "Eva\Eva.csproj", "{0E079F2E-4859-4D04-9781-8389718365B8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvaTests", "EvaTests\EvaTests.csproj", "{3950ABF9-2A12-4325-AB8C-55C32DC87403}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EvaTests", "EvaTests\EvaTests.csproj", "{3950ABF9-2A12-4325-AB8C-55C32DC87403}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2A7E5918-07C0-41C0-B2A5-7F92B78F2A87}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -6,6 +6,7 @@ using Tweetinvi.Models.Entities;
 using System.Collections.Generic;
 using Tweetinvi;
 using System;
+using Microsoft.Extensions.Configuration;
 
 namespace Tests
 {
@@ -14,7 +15,10 @@ namespace Tests
         [SetUp]
         public void Setup()
         {
-            
+            var builder = new ConfigurationBuilder()        // Create a new instance of the config builder
+                .SetBasePath(AppContext.BaseDirectory)      // Specify the default location for the config file
+                .AddJsonFile("config.json");                // Add this (json encoded) file to the configuration
+            Eva.Eva.Configuration = builder.Build();                // Build the configuration
             ITwitterCredentials creds = Eva.Eva.GetTwitterCredencials();
             Auth.SetCredentials(creds);
             Auth.ApplicationCredentials = creds;

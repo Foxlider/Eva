@@ -58,8 +58,6 @@ namespace Eva.Modules
         }
         #region COMMANDS
 
-
-
         #region Help
         /// <summary>
         /// HELP - Displays some help
@@ -192,7 +190,6 @@ namespace Eva.Modules
             await Context.Channel.SendMessageAsync("", false, embed);
         }
         #endregion version
-
 
         #region quote
         /// <summary>
