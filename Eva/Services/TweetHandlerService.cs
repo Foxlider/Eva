@@ -84,9 +84,9 @@ namespace Eva.Services
                     var name = Eva.rand.Next(100, 999);
                     Log.Message(Log.info, $"Discord Media Thread {name} started", "Discord Media");
                     var t1 = DateTime.Now;
-                    var str = DownloadMedia(media, user.Username);
+                    var mediaPath = DownloadMedia(media, user.Username);
                     var t2 = DateTime.Now;
-                    var tweetMedia = Upload.UploadBinary(File.ReadAllBytes(str));
+                    var tweetMedia = Upload.UploadBinary(File.ReadAllBytes(mediaPath));
                     medias.Add(tweetMedia);
                     var t3 = DateTime.Now;
                     Log.Message(Log.info, $"Discord Media Thread {name} finished in {(t3-t1).TotalMilliseconds}ms \n" +
