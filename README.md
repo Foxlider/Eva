@@ -18,6 +18,8 @@ Publish some pictures to twitter with the #EDPostcards or by quoting @ED_Postcar
  - quote		Quote a specified tweet
  - help			Displays the bot's help on commands
  - logLvl		Changes the severity level of console messages
+ - role			Give the user the Photograph Role
+ - send			Send pictures to Twitter.
 
  # [ Changelog ]
 
@@ -33,3 +35,14 @@ Added :
 Fixed : 
   - Some minor code fixes  
   - Some minor typo fixes  
+  - Fixed tests configuration
+  - Tests compatibility with appveyor
+
+###   [ v1.2 ]  
+Added : 
+ - Command role to give a user the photograph role
+ - Command send to send pictures from Discord to twitter
+ - RequireRole Precondition
+
+Fixed : 
+ - Fixed DownloadMedia would download uncompatible Medias

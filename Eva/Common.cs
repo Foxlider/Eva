@@ -205,7 +205,7 @@ namespace Eva.Modules
         {
             try
             {
-                var id = Int64.Parse(url.Split('/')[url.Split('/').Length-1]);
+                var id = Int64.Parse(url.Split('/')[url.Split('/').Length - 1]);
                 var tweet = Tweet.GetTweet(id);
                 if (TweetService.CheckTweet(tweet, User.GetAuthenticatedUser()))
                 {
@@ -216,9 +216,76 @@ namespace Eva.Modules
             }
             catch
             { Log.Message(Log.warning, "Whoopsie", "Discord Quote"); }
-            
         }
         #endregion quote
+
+        #region role
+        [Command("role", RunMode = RunMode.Async), Summary("Give the user the Photograph Role")]
+        [Alias("photograph")]
+        public async Task Role()
+        {
+            var user = Context.User as SocketGuildUser;
+            var role = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Photograph");
+            if (!user.Roles.Contains(role))
+            {
+                var tweetUser = User.GetUserFromScreenName(user.Nickname);
+                if (tweetUser != null)
+                {
+                    await user.AddRoleAsync(role);
+                    await ReplyAsync("You're a Photograph now !");
+                }
+                else
+                { await ReplyAsync("Can't find your Twitter Name. \nMake sure your Discord nickname and your Twitter @ are the same", deleteafter: TimeSpan.FromSeconds(5)); }
+            }
+            else
+            { await ReplyAsync("You're already a Photograph !", deleteafter: TimeSpan.FromSeconds(5)); }
+        }
+        #endregion requirerole
+
+        #region send
+        [Command("send", RunMode = RunMode.Async), Summary("Send pictures to Twitter.")]
+        [RequireRole("Photograph")]
+        public async Task Poll([Remainder, Summary("The message to send")] string msg)
+        {
+            List<IAttachment> attachments = new List<IAttachment>();
+            var tempAttachments = new List<IAttachment>();
+            if (Context.Message.Attachments.Count > 0)
+            { attachments.Add(Context.Message.Attachments.FirstOrDefault()); }
+            var delay = 15;
+            var botMsg = await ReplyAsync($"Waiting for more images...\nYour message will be sent to Twitter in {delay} seconds");
+            var typing = Context.Channel.EnterTypingState();
+            for (int i = 0; i < delay; i++)
+            {
+                var startExec = DateTime.Now;
+                var msgList = await Context.Channel.GetMessagesAsync(Context.Message, Direction.After, 10).FlattenAsync();
+                var tempMsgs = msgList.Where(m => m.Author.Id == Context.Message.Author.Id
+                                            && m.Attachments.Count > 0);
+
+                if ((tempAttachments.Count + attachments.Count) < 4)
+                {
+                    tempAttachments.Clear(); // Clear temp attachments before filling it
+                    foreach (var mess in tempMsgs)
+                    {
+                        if (mess.Attachments.Count > 0 && (tempAttachments.Count + attachments.Count) < 4)
+                        { tempAttachments.Add(mess.Attachments.FirstOrDefault()); }
+                    }
+                }
+                else
+                { break; }
+                var stopExec = DateTime.Now - startExec;
+                if (stopExec.TotalMilliseconds < 1000)
+                { await Task.Delay((int)(1000 - stopExec.TotalMilliseconds)); }
+                await botMsg.ModifyAsync(m =>
+                { m.Content = $"Waiting for more images...\nYour message will be sent to Twitter in {delay -1 - i} seconds"; });
+            }
+            attachments.AddRange(tempAttachments);
+            await botMsg.DeleteAsync();
+            var message = Context.Message.Content.Substring(Context.Message.Content.IndexOf("send") + "send".Length);
+            TweetService.DiscordTweet(message, Context.User, attachments);
+            typing.Dispose();
+            await ReplyAsync($"Tweet sent with {attachments.Count} images !", deleteafter: TimeSpan.FromSeconds(3));
+        }
+        #endregion send
 
         #region loglvl
         [Command("loglvl"), Summary("Sets logs severity")]
@@ -240,5 +307,35 @@ namespace Eva.Modules
         #endregion
 
         #endregion COMMANDS
+    }
+
+
+
+    // Inherit from PreconditionAttribute
+    public class RequireRoleAttribute : PreconditionAttribute
+    {
+        // Create a field to store the specified name
+        private readonly string _name;
+
+        // Create a constructor so the name can be specified
+        public RequireRoleAttribute(string name) => _name = name;
+
+        // Override the CheckPermissions method
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        {
+            // Check if this user is a Guild User, which is the only context where roles exist
+            if (context.User is SocketGuildUser gUser)
+            {
+                // If this command was executed by a user with the appropriate role, return a success
+                if (gUser.Roles.Any(r => r.Name == _name))
+                    // Since no async work is done, the result has to be wrapped with `Task.FromResult` to avoid compiler errors
+                    return Task.FromResult(PreconditionResult.FromSuccess());
+                // Since it wasn't, fail
+                else
+                    return Task.FromResult(PreconditionResult.FromError($"You must have a role named {_name} to run this command."));
+            }
+            else
+                return Task.FromResult(PreconditionResult.FromError("You must be in a guild to run this command."));
+        }
     }
 }

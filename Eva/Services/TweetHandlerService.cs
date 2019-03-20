@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Discord;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -8,6 +9,7 @@ using System.Threading;
 using Tweetinvi;
 using Tweetinvi.Models;
 using Tweetinvi.Models.Entities;
+using Tweetinvi.Parameters;
 
 namespace Eva.Services
 {
@@ -45,7 +47,7 @@ namespace Eva.Services
         /// <param name="tweet">Tweet to check</param>
         /// <param name="user">The current bot user</param>
         /// <returns>Boolean</returns>
-        public static bool CheckTweet(ITweet tweet, IUser user)
+        public static bool CheckTweet(ITweet tweet, Tweetinvi.Models.IUser user)
         {
             if (!tweet.IsRetweet                            //  NOT A RETWEET
                 && tweet.InReplyToStatusId == null          //  NOT A REPLY
@@ -70,16 +72,68 @@ namespace Eva.Services
             return response;
         }
 
+        public static ITweet DiscordTweet(string message, Discord.IUser user, List<IAttachment> attachments)
+        {
+            string str = String.Format(startString[Eva.rand.Next(0, startString.Count)], user.Username, attachments.Count);
+            List<IMedia> medias = new List<IMedia>();
+            List<Thread> threads = new List<Thread>();
+            foreach (var media in attachments)
+            {
+                Thread t = new Thread(() =>
+                {
+                    var name = Eva.rand.Next(100, 999);
+                    Log.Message(Log.info, $"Discord Media Thread {name} started", "Discord Media");
+                    var t1 = DateTime.Now;
+                    var str = DownloadMedia(media, user.Username);
+                    var t2 = DateTime.Now;
+                    var tweetMedia = Upload.UploadBinary(File.ReadAllBytes(str));
+                    medias.Add(tweetMedia);
+                    var t3 = DateTime.Now;
+                    Log.Message(Log.info, $"Discord Media Thread {name} finished in {(t3-t1).TotalMilliseconds}ms \n" +
+                        $"  - Media downloaded in   {(t2 - t1).TotalMilliseconds}ms\n" +
+                        $"  - Media Uploaded in     {(t3 - t2).TotalMilliseconds}ms", "Discord Media");
+                });
+                t.Start();//start thread and pass it the port
+                threads.Add(t);
+            }
+            foreach (var thread in threads)
+            { thread.Join(); }
+
+            var response = Tweet.PublishTweet($"{str}\n\"{message.Trim()}\"\n-Sent by {user.Username} on Discord-", new PublishTweetOptionalParameters
+            { Medias = medias });
+
+            return response;
+        }
+
         private static void DownloadMedia(IMediaEntity media, string name)
         {
-            //https://stackoverflow.com/questions/8349693/how-to-check-if-a-byte-array-is-a-valid-image
             using (WebClient client = new WebClient())
             {
-                Log.Message(Log.neutral, Path.Combine(AppContext.BaseDirectory, "images", name), "Media Thread");
+                var ext = Path.GetExtension(media.MediaURLHttps);
+                if (ext == ".jpg" || ext == ".png")
+                {
+                    var date = DateTime.Now;
+                    if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "images", name)))
+                        Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name));
+                    client.DownloadFile(new Uri(media.MediaURLHttps), Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date.ToString("dd_MM_yyyy_HH-mm-ss")}--{Eva.rand.Next(1000, 9999)}{ext}"));
+                } 
+            }
+        }
+
+        private static string DownloadMedia(IAttachment media, string name)
+        {
+            using (WebClient client = new WebClient())
+            {
+                var ext = Path.GetExtension(media.Url);
                 var date = DateTime.Now;
-                if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "images", name)))
-                    Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name));
-                client.DownloadFile(new Uri(media.MediaURLHttps), Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date.ToString("dd_MM_yyyy_HH-mm-ss")}--{Eva.rand.Next(1000, 9999)}.jpg"));
+                var path = Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date.ToString("dd_MM_yyyy_HH-mm-ss")}--{Eva.rand.Next(1000, 9999)}{ext}");
+                if (ext == ".jpg" || ext == ".png")
+                {
+                    if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "images", name)))
+                        Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name));
+                    client.DownloadFile(new Uri(media.Url), path);
+                }
+                return path;
             }
         }
     }

@@ -56,8 +56,7 @@ namespace Tests
         {
             IUser user = CreateMockUser("Eva", "EvaBot", "SomeDesc", 123456).Object;
             ITweet tweet = CreateMockTweet(new List<string> { "some media", "more medias" }, false, "Some Tweet", user, null).Object;
-            bool value = Eva.Services.TweetService.CheckTweet(tweet, user);
-            Assert.AreEqual(false, value);
+            Assert.AreEqual(false, Eva.Services.TweetService.CheckTweet(tweet, user));
         }
 
         [Test]
@@ -65,8 +64,7 @@ namespace Tests
         {
             IUser user = CreateMockUser("Eva", "EvaBot", "SomeDesc", 123456).Object;
             ITweet tweet = CreateMockTweet(new List<string> { "some media", "more medias" }, true, "Some Tweet", user, null).Object;
-            bool value = Eva.Services.TweetService.CheckTweet(tweet, user);
-            Assert.AreEqual(false, value);
+            Assert.AreEqual(false, Eva.Services.TweetService.CheckTweet(tweet, user));
         }
 
         [Test]
@@ -74,8 +72,7 @@ namespace Tests
         {
             IUser user = CreateMockUser("Eva", "EvaBot", "SomeDesc", 123456).Object;
             ITweet tweet = CreateMockTweet(new List<string> { "some media", "more medias" }, false, "Some Tweet", user, 123456).Object;
-            bool value = Eva.Services.TweetService.CheckTweet(tweet, user);
-            Assert.AreEqual(false, value);
+            Assert.AreEqual(false, Eva.Services.TweetService.CheckTweet(tweet, user));
         }
 
         [Test]
@@ -83,8 +80,7 @@ namespace Tests
         {
             IUser user = CreateMockUser("Eva", "EvaBot", "SomeDesc", 123456).Object;
             ITweet tweet = CreateMockTweet(new List<string>(), false, "Some Tweet", user, null).Object;
-            bool value = Eva.Services.TweetService.CheckTweet(tweet, user);
-            Assert.AreEqual(false, value);
+            Assert.AreEqual(false, Eva.Services.TweetService.CheckTweet(tweet, user));
         }
 
         [Test]
@@ -92,8 +88,7 @@ namespace Tests
         {
             IUser user = CreateMockUser("Eva", "EvaBot", "SomeDesc", 123456).Object;
             ITweet tweet = CreateMockTweet(new List<string> { "some media", "more medias" }, false, "Some Tweet", user, null).Object;
-            bool value = Eva.Services.TweetService.CheckTweet(tweet, User.GetAuthenticatedUser());
-            Assert.AreEqual(true, value);
+            Assert.AreEqual(true, Eva.Services.TweetService.CheckTweet(tweet, User.GetAuthenticatedUser()));
         }
 
     }
