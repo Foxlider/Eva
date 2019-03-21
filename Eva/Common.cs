@@ -209,13 +209,13 @@ namespace Eva.Modules
                 var tweet = Tweet.GetTweet(id);
                 if (TweetService.CheckTweet(tweet, User.GetAuthenticatedUser()))
                 {
-                    Log.Message(Log.neutral, $"QUOTING {tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", "Discord Quote");
+                    Logger.Log(Logger.neutral, $"QUOTING {tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", "Discord Quote");
                     var response = TweetService.SendTweet(tweet);
                     await ReplyAsync($"Tweet have been quoted : {response.Url}");
                 }
             }
             catch
-            { Log.Message(Log.warning, "Whoopsie", "Discord Quote"); }
+            { Logger.Log(Logger.warning, "Whoopsie", "Discord Quote"); }
         }
         #endregion quote
 
@@ -281,7 +281,8 @@ namespace Eva.Modules
             attachments.AddRange(tempAttachments);
             await botMsg.DeleteAsync();
             var message = Context.Message.Content.Substring(Context.Message.Content.IndexOf("send") + "send".Length);
-            TweetService.DiscordTweet(message, Context.User, attachments);
+            var user = await Context.Guild.GetUserAsync(Context.User.Id);
+            TweetService.DiscordTweet(message, user, attachments);
             typing.Dispose();
             await ReplyAsync($"Tweet sent with {attachments.Count} images !", deleteafter: TimeSpan.FromSeconds(3));
         }

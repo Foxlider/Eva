@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -61,35 +62,53 @@ namespace Eva.Services
         {
             string str = String.Format(startString[Eva.rand.Next(0, startString.Count)], tweet.CreatedBy.ScreenName, tweet.Media.Count);
             var response = Tweet.PublishTweet($"{str} https://twitter.com/{tweet.CreatedBy.ScreenName}/status/{tweet.Id}");
+            var threads = new List<Thread>();
+            List<string> medias = new List<string>();
             foreach (var media in tweet.Media)
             {
-                new Thread(() =>
+                Thread t = new Thread(() =>
                 {
-                    Thread.CurrentThread.Name = "MediaThread";
-                    DownloadMedia(media, tweet.CreatedBy.ScreenName);
-                }).Start();
+                    var t1 = DateTime.Now;
+                    var name = Eva.rand.Next(100, 999);
+                    Logger.Log(Logger.info, $"Twitter Media Thread {name} started", "Twitter Media");
+                    medias.Add(DownloadMedia(media, tweet.CreatedBy.ScreenName));
+                    var t2 = DateTime.Now;
+                    Logger.Log(Logger.info, $"Discord Media Thread {name} finished in {(t2 - t1).TotalMilliseconds}ms \n" +
+                        $"  - Media downloaded in   {(t2 - t1).TotalMilliseconds}ms", "Twitter Media");
+                });
+                t.Start();
+                threads.Add(t);
             }
+            foreach (var thread in threads)
+            { thread.Join(); }
+
+            new Thread(async () =>
+            {
+                var t1 = DateTime.Now;
+                var name = Eva.rand.Next(100, 999);
+                await DiscordTweetMessageAsync(tweet, medias, t1, name);
+            }).Start();
             return response;
         }
 
-        public static ITweet DiscordTweet(string message, Discord.IUser user, List<IAttachment> attachments)
+        public static ITweet DiscordTweet(string message, IGuildUser user, List<IAttachment> attachments)
         {
             string str = String.Format(startString[Eva.rand.Next(0, startString.Count)], user.Username, attachments.Count);
             List<IMedia> medias = new List<IMedia>();
-            List<Thread> threads = new List<Thread>();
+            var threads = new List<Thread>();
             foreach (var media in attachments)
             {
                 Thread t = new Thread(() =>
                 {
                     var name = Eva.rand.Next(100, 999);
-                    Log.Message(Log.info, $"Discord Media Thread {name} started", "Discord Media");
+                    Logger.Log(Logger.info, $"Discord Media Thread {name} started", "Discord Media");
                     var t1 = DateTime.Now;
-                    var mediaPath = DownloadMedia(media, user.Username);
+                    var mediaPath = DownloadMedia(media, user.Nickname);
                     var t2 = DateTime.Now;
                     var tweetMedia = Upload.UploadBinary(File.ReadAllBytes(mediaPath));
                     medias.Add(tweetMedia);
                     var t3 = DateTime.Now;
-                    Log.Message(Log.info, $"Discord Media Thread {name} finished in {(t3-t1).TotalMilliseconds}ms \n" +
+                    Logger.Log(Logger.info, $"Discord Media Thread {name} finished in {(t3-t1).TotalMilliseconds}ms \n" +
                         $"  - Media downloaded in   {(t2 - t1).TotalMilliseconds}ms\n" +
                         $"  - Media Uploaded in     {(t3 - t2).TotalMilliseconds}ms", "Discord Media");
                 });
@@ -105,18 +124,20 @@ namespace Eva.Services
             return response;
         }
 
-        private static void DownloadMedia(IMediaEntity media, string name)
+        private static string DownloadMedia(IMediaEntity media, string name)
         {
             using (WebClient client = new WebClient())
             {
                 var ext = Path.GetExtension(media.MediaURLHttps);
+                var date = DateTime.Now;
+                var path = Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date.ToString("dd_MM_yyyy_HH-mm-ss")}--{RandomString(5)}{ext}");
                 if (ext == ".jpg" || ext == ".png")
                 {
-                    var date = DateTime.Now;
                     if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "images", name)))
-                        Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name));
-                    client.DownloadFile(new Uri(media.MediaURLHttps), Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date.ToString("dd_MM_yyyy_HH-mm-ss")}--{Eva.rand.Next(1000, 9999)}{ext}"));
-                } 
+                    { Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name)); }
+                    client.DownloadFile(new Uri(media.MediaURLHttps), path);
+                }
+                return path;
             }
         }
 
@@ -126,15 +147,43 @@ namespace Eva.Services
             {
                 var ext = Path.GetExtension(media.Url);
                 var date = DateTime.Now;
-                var path = Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date.ToString("dd_MM_yyyy_HH-mm-ss")}--{Eva.rand.Next(1000, 9999)}{ext}");
+                var path = Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date.ToString("dd_MM_yyyy_HH-mm-ss")}--{RandomString(5)}{ext}");
                 if (ext == ".jpg" || ext == ".png")
                 {
                     if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "images", name)))
-                        Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name));
+                    { Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name)); }
                     client.DownloadFile(new Uri(media.Url), path);
                 }
                 return path;
             }
+        }
+
+        private static async System.Threading.Tasks.Task DiscordTweetMessageAsync(ITweet tweet, List<string> medias, DateTime t1, int name)
+        {
+            Logger.Log(Logger.info, $"Discord Tweet Thread {name} started", "Discord Tweet");
+            var guild = Eva.client.GetGuild(514426990699216899);
+            var channel = guild.GetTextChannel(514433570597634050);
+            var threadMsg = "";
+            foreach (var media in medias)
+            {
+                string msg = "";
+                var tempStart = DateTime.Now;
+                if (medias.IndexOf(media) == 0)
+                {
+                    msg = $"\"{tweet.FullText}\"\n - By @{tweet.CreatedBy.ScreenName} -";
+                }
+                await channel.SendFileAsync(media, msg);
+                threadMsg += $"  - Media Uploaded in     {(DateTime.Now - tempStart).TotalMilliseconds}ms\n";
+            }
+            Logger.Log(Logger.info, $"Discord Tweet Thread { name} finished in { (DateTime.Now - t1).TotalMilliseconds}ms\n{threadMsg}", "Discord Tweet");
+        }
+
+
+        public static string RandomString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz-";
+            return new string(Enumerable.Repeat(chars, length)
+                                        .Select(s => s[Eva.rand.Next(s.Length)]).ToArray());
         }
     }
 }

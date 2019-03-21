@@ -67,7 +67,7 @@ namespace Eva
         /// <returns></returns>
         public async Task RunAsync()
         {
-            Log.Message(Log.info, 
+            Logger.Log(Logger.info, 
                 $"Booting up...\n" +
                 $"_________\n" +
                 $"{Assembly.GetExecutingAssembly().GetName().Name} " +
@@ -83,7 +83,7 @@ namespace Eva
                                                  | SecurityProtocolType.Tls11
                                                  | SecurityProtocolType.Tls12;
             var authenticatedUser = User.GetAuthenticatedUser();
-            Log.Message(Log.neutral,
+            Logger.Log(Logger.neutral,
                 $"{authenticatedUser.Name} is connected :\n" +
                 $"  _____________\n" +
                 $"  ScreenName  : @{authenticatedUser.ScreenName}\n" +
@@ -96,7 +96,7 @@ namespace Eva
             { LogLevel = LogSeverity.Debug });
             client.Log += (LogMessage message) =>
             {
-                Log.Message((int)message.Severity, message.Message, message.Source);
+                Logger.Log((int)message.Severity, message.Message, message.Source);
                 return Task.CompletedTask;
             };
             commands = new CommandService();
@@ -107,17 +107,17 @@ namespace Eva
 
             client.Ready += () =>
             {
-                Log.Neutral($"{client.CurrentUser.Username}#{client.CurrentUser.Discriminator} is connected !\n\n" +
+                Logger.Log(Logger.neutral, $"{client.CurrentUser.Username}#{client.CurrentUser.Discriminator} is connected !\n\n" +
                     $"__[ CONNECTED TO ]__\n", "Eva Login");
                 foreach (var guild in client.Guilds)
                 {
-                    Log.Neutral(
+                    Logger.Log(Logger.neutral,
                         $"\t_______________\n" +
                         $"\t{guild.Name} \n" +
                         $"\tOwned by {guild.Owner.Nickname}#{guild.Owner.Discriminator}\n" +
                         $"\t{guild.MemberCount} members", "Eva Login");
                 }
-                Log.Neutral("\t_______________", "Eva Login");
+                Logger.Log(Logger.neutral, "\t_______________", "Eva Login");
                 Console.Title = $"{Assembly.GetExecutingAssembly().GetName().Name} v{GetVersion()}";
                 SetDefaultStatus(client);
                 return Task.CompletedTask;
@@ -135,10 +135,9 @@ namespace Eva
                 stream.MatchingTweetReceived += (sender, args) =>
                 {
                     var tweet = args.Tweet;
-                    Log.Message(Log.neutral, "A tweet containing 'ED Postcards' has been found; the tweet is '" + args.Tweet + "'", "StreamListener");
                     if (TweetService.CheckTweet(tweet, user))
                     {
-                        Log.Message(Log.neutral, $"{tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", "StreamListener");
+                        Logger.Log(Logger.neutral, $"{tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", "StreamListener");
                         TweetService.SendTweet(tweet);
                     }
                 };
@@ -174,7 +173,7 @@ namespace Eva
             if (!(messageParam is SocketUserMessage message))
             { return; }
             if (message.Channel is IPrivateChannel)
-            { Log.Neutral($"{message.Author} in {message.Channel.Name}\n    :: { message.Content}", "DirectMessage"); }
+            { Logger.Log(Logger.neutral, $"{message.Author} in {message.Channel.Name}\n    :: { message.Content}", "DirectMessage"); }
             // Create a number to track where the prefix ends and the command begins
             int argPos = 0;
             if (!(message.HasStringPrefix(Configuration["prefix"], ref argPos) || message.HasMentionPrefix(client.CurrentUser, ref argPos)))
@@ -196,14 +195,14 @@ namespace Eva
         {
             if (string.IsNullOrEmpty(Configuration["tokens:Discord"]))
             {
-                Log.Error("Impossible to read Discord Token", "Eva Login");
-                Log.Neutral("Do you want to edit the configuration file ? (Y/n)\n", "Eva Login");
+                Logger.Log(Logger.error, "Impossible to read Discord Token", "Eva Login");
+                Logger.Log(Logger.neutral, "Do you want to edit the configuration file ? (Y/n)\n", "Eva Login");
                 var answer = Console.ReadKey();
                 if (answer.Key == ConsoleKey.Enter || answer.Key == ConsoleKey.Y)
                 { EditDiscordToken(); }
                 else
                 {
-                    Log.Warning("Shutting Down...\nPress Enter to continue.", "Eva Logout");
+                    Logger.Log(Logger.warning, "Shutting Down...\nPress Enter to continue.", "Eva Logout");
                     Console.ReadKey();
                     Environment.Exit(-1);
                 }
@@ -222,14 +221,14 @@ namespace Eva
                 || string.IsNullOrEmpty(Configuration["tokens:TwitterToken"])
                 || string.IsNullOrEmpty(Configuration["tokens:TwitterTokenSecret"]))
             {
-                Log.Error("Impossible to read Configuration.", "Eva Login");
-                Log.Neutral("Do you want to edit the configuration file ? (Y/n)\n", "Eva Login");
+                Logger.Log(Logger.error, "Impossible to read Configuration.", "Eva Login");
+                Logger.Log(Logger.neutral, "Do you want to edit the configuration file ? (Y/n)\n", "Eva Login");
                 var answer = Console.ReadKey();
                 if (answer.Key == ConsoleKey.Enter || answer.Key == ConsoleKey.Y)
                 { EditTwitterToken(); }
                 else
                 {
-                    Log.Warning("Shutting Down...\nPress Enter to continue.", "Eva Logout");
+                    Logger.Log(Logger.warning, "Shutting Down...\nPress Enter to continue.", "Eva Logout");
                     Console.ReadKey();
                     Environment.Exit(-1);
                 }
@@ -263,7 +262,7 @@ namespace Eva
                 { throw; }
             }
 
-            Log.Neutral("Please enter the bot's token below.\n", "Eva Login");
+            Logger.Log(Logger.neutral, "Please enter the bot's token below.\n", "Eva Login");
             var answer = Console.ReadLine();
             Configuration["tokens:discord"] = answer;
             var filePath = Path.Combine(AppContext.BaseDirectory, "config.json");
@@ -300,19 +299,19 @@ namespace Eva
                 { throw; }
             }
 
-            Log.Neutral("Please enter the bot's API key below.\n", "Eva Login");
+            Logger.Log(Logger.neutral, "Please enter the bot's API key below.\n", "Eva Login");
             var answer = Console.ReadLine();
             Configuration["tokens:TwitterApiKey"] = answer.Trim();
 
-            Log.Neutral("Please enter the bot's API secret below.\n", "Eva Login");
+            Logger.Log(Logger.neutral, "Please enter the bot's API secret below.\n", "Eva Login");
             answer = Console.ReadLine();
             Configuration["tokens:TwitterApiSecret"] = answer.Trim();
 
-            Log.Neutral("Please enter the bot's Access Token below.\n", "Eva Login");
+            Logger.Log(Logger.neutral, "Please enter the bot's Access Token below.\n", "Eva Login");
             answer = Console.ReadLine();
             Configuration["tokens:TwitterToken"] = answer.Trim();
 
-            Log.Neutral("Please enter the bot's Token Secret below.\n", "Eva Login");
+            Logger.Log(Logger.neutral, "Please enter the bot's Token Secret below.\n", "Eva Login");
             answer = Console.ReadLine();
             Configuration["tokens:TwitterTokenSecret"] = answer.Trim();
 
@@ -335,7 +334,7 @@ namespace Eva
         private static void ConfigureServices(IServiceCollection serviceCollection)
         {
             serviceCollection.AddSingleton(new TweetService());
-            serviceCollection.AddSingleton(new LoggingService());
+            serviceCollection.AddSingleton(new Logger());
         }
 
         /// <summary>
@@ -369,14 +368,14 @@ namespace Eva
             var latestException = ExceptionHandler.GetLastException();
             if(latestException != null)
             {
-                Log.Message(Log.error, $"ERROR : [{latestException.StatusCode}] {latestException.TwitterDescription}\n{latestException.TwitterExceptionInfos} ");
+                Logger.Log(Logger.error, $"ERROR : [{latestException.StatusCode}] {latestException.TwitterDescription}\n{latestException.TwitterExceptionInfos} ");
             }
             try
             { client.LogoutAsync(); }
             catch { }
             finally
             { client.Dispose(); }
-            Log.Message(Log.warning, "Shutting Down...", "Eva Logout");
+            Logger.Log(Logger.warning, "Shutting Down...", "Eva Logout");
             Environment.Exit(0);
         }
     }

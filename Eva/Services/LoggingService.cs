@@ -23,7 +23,7 @@ namespace Eva.Services
     /// <summary>
     /// Logging service to handle Application-side logs
     /// </summary>
-    public class Log
+    public class Logger
     {
         public const int neutral = -1;
         public const int critical = 0;
@@ -32,41 +32,73 @@ namespace Eva.Services
         public const int info = 3;
         public const int verbose = 4;
         public const int debug = 5;
+
+        private static List<string> severities = new List<string>
+        { "Critical", "Error", "Warning", "Info", "Verbose", "Debug", "Neutral" };
+
+        private static string _logDirectory { get; set; }
+        private static string _logFile { get; set; } 
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public Logger()
+        {
+            _logDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
+            if (!Directory.Exists(_logDirectory))
+            { Directory.CreateDirectory(_logDirectory); }
+            _logFile = Path.Combine(_logDirectory, $"EvaLogs-{DateTime.Now.ToString("yyyy-MM-dd")}.txt");
+        }
+
         /// <summary>
         /// Log message function handling Discord Logging
         /// </summary>
         /// <param name="Severity">Message's severity</param>
         /// <param name="message">Message's text</param>
         /// <param name="source">Message's source</param>
-        public static void Message(int Severity, string message, string source = "")
+        public static void Log(int Severity, string message, string source = "")
         {
             if (source == null)
             { source = ""; }
+            LogFile(Severity, message, source);
             switch (Severity)
             {
-                case 0:
+                case critical:
                     Critical(message, source);
                     break;
-                case 1:
+                case error:
                     Error(message, source);
                     break;
-                case 2:
+                case warning:
                     Warning(message, source);
                     break;
-                case 3:
+                case info:
                     Information(message, source);
                     break;
-                case 4:
+                case verbose:
                     Verbose(message, source);
                     break;
-                case 5:
+                case debug:
                     Debug(message, source);
                     break;
-                case -1:
+                case neutral:
                     Neutral(message, source);
                     break;
                 default:
                     break;
+            }
+        }
+
+        private static void LogFile(int severity, string message, string source)
+        {
+            if (Eva.logLvl >= severity)
+            {
+                string Severity =severities[(severity % severities.Count + severities.Count) % severities.Count ].PadRight(8);
+                string[] lines = message.Split("\n");
+                List<string> formatLines = new List<string>();
+                foreach (var line in lines)
+                { formatLines.Add($"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : {line}"); }
+                File.AppendAllLines(_logFile, formatLines);
             }
         }
 
@@ -75,7 +107,7 @@ namespace Eva.Services
         /// </summary>
         /// <param name="message"></param>
         /// <param name="source"></param>
-        public static void Debug(string message, string source = "")
+        private static void Debug(string message, string source = "")
         {
             if (Eva.logLvl >= 5)
             {
@@ -93,7 +125,7 @@ namespace Eva.Services
         /// </summary>
         /// <param name="message"></param>
         /// <param name="source"></param>
-        public static void Verbose(string message, string source = "")
+        private static void Verbose(string message, string source = "")
         {
             if (Eva.logLvl >= 4)
             {
@@ -111,7 +143,7 @@ namespace Eva.Services
         /// </summary>
         /// <param name="message"></param>
         /// <param name="source"></param>
-        public static void Error(string message, string source = "")
+        private static void Error(string message, string source = "")
         {
             if (Eva.logLvl >= 1)
             {
@@ -129,7 +161,7 @@ namespace Eva.Services
         /// </summary>
         /// <param name="message"></param>
         /// <param name="source"></param>
-        public static void Critical(string message, string source = "")
+        private static void Critical(string message, string source = "")
         {
             if (Eva.logLvl >= 0)
             {
@@ -147,7 +179,7 @@ namespace Eva.Services
         /// </summary>
         /// <param name="message"></param>
         /// <param name="source"></param>
-        public static void Information(string message, string source = "")
+        private static void Information(string message, string source = "")
         {
             if (Eva.logLvl >= 3)
             {
@@ -165,7 +197,7 @@ namespace Eva.Services
         /// </summary>
         /// <param name="message"></param>
         /// <param name="source"></param>
-        public static void Warning(string message, string source = "")
+        private static void Warning(string message, string source = "")
         {
             if (Eva.logLvl >= 2)
             {
@@ -183,7 +215,7 @@ namespace Eva.Services
         /// </summary>
         /// <param name="message"></param>
         /// <param name="source"></param>
-        public static void Neutral(string message, string source = "")
+        private static void Neutral(string message, string source = "")
         {
             string Severity = "Normal".PadRight(8);
             string[] lines = message.Split("\n");
