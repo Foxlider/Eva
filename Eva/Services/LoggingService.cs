@@ -2,24 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Eva.Services
 {
-    class LoggingService
-    {
-        private string _logDirectory { get; set; }
-        private string _logFile => Path.Combine(_logDirectory, $"{DateTime.UtcNow.ToString("yyyy-MM-dd")}.txt");
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        public LoggingService()
-        {
-            _logDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
-        }
-    }
-
-
     /// <summary>
     /// Logging service to handle Application-side logs
     /// </summary>
@@ -33,21 +19,23 @@ namespace Eva.Services
         public const int verbose = 4;
         public const int debug = 5;
 
+        public static object Locked = new object();
+
         private static List<string> severities = new List<string>
         { "Critical", "Error", "Warning", "Info", "Verbose", "Debug", "Neutral" };
 
-        private static string _logDirectory { get; set; }
-        private static string _logFile { get; set; } 
+        private static string LogDirectory { get; set; }
+        private static string LogFile { get; set; } 
 
         /// <summary>
         /// Constructor
         /// </summary>
         public Logger()
         {
-            _logDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
-            if (!Directory.Exists(_logDirectory))
-            { Directory.CreateDirectory(_logDirectory); }
-            _logFile = Path.Combine(_logDirectory, $"EvaLogs-{DateTime.Now.ToString("yyyy-MM-dd")}.txt");
+            LogDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
+            if (!Directory.Exists(LogDirectory))
+            { Directory.CreateDirectory(LogDirectory); }
+            LogFile = Path.Combine(LogDirectory, $"EvaLogs-{DateTime.Now.ToString("yyyy-MM-dd")}.txt");
         }
 
         /// <summary>
@@ -60,7 +48,7 @@ namespace Eva.Services
         {
             if (source == null)
             { source = ""; }
-            LogFile(Severity, message, source);
+            LogToFile(Severity, message, source);
             switch (Severity)
             {
                 case critical:
@@ -89,16 +77,19 @@ namespace Eva.Services
             }
         }
 
-        private static void LogFile(int severity, string message, string source)
+        private static void LogToFile(int severity, string message, string source)
         {
-            if (Eva.logLvl >= severity)
+            lock (Locked)
             {
-                string Severity =severities[(severity % severities.Count + severities.Count) % severities.Count ].PadRight(8);
-                string[] lines = message.Split("\n");
-                List<string> formatLines = new List<string>();
-                foreach (var line in lines)
-                { formatLines.Add($"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : {line}"); }
-                File.AppendAllLines(_logFile, formatLines);
+                if (Eva.logLvl >= severity)
+                {
+                    string Severity = severities[(severity % severities.Count + severities.Count) % severities.Count].PadRight(8);
+                    string[] lines = message.Split("\n");
+                    List<string> formatLines = new List<string>();
+                    foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : "))
+                    { formatLines.Add(line); }
+                    File.AppendAllLines(LogFile, formatLines);
+                }
             }
         }
 
@@ -113,9 +104,8 @@ namespace Eva.Services
             {
                 Console.ForegroundColor = ConsoleColor.Blue;
                 string Severity = "Debug".PadRight(8);
-                string[] lines = message.Split("\n");
-                foreach (var line in lines)
-                { Console.WriteLine($"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : {line}"); }
+                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
+                { Console.WriteLine(line); }
                 Console.ResetColor();
             }
         }
@@ -131,9 +121,8 @@ namespace Eva.Services
             {
                 Console.ForegroundColor = ConsoleColor.Gray;
                 string Severity = "Verbose".PadRight(8);
-                string[] lines = message.Split("\n");
-                foreach (var line in lines)
-                { Console.WriteLine($"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : {line}"); }
+                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
+                { Console.WriteLine(line); }
                 Console.ResetColor();
             }
         }
@@ -149,9 +138,8 @@ namespace Eva.Services
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 string Severity = "Error".PadRight(8);
-                string[] lines = message.Split("\n");
-                foreach (var line in lines)
-                { Console.WriteLine($"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : {line}"); }
+                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
+                { Console.WriteLine(line); }
                 Console.ResetColor();
             }
         }
@@ -167,9 +155,8 @@ namespace Eva.Services
             {
                 Console.ForegroundColor = ConsoleColor.DarkRed;
                 string Severity = "Critical".PadRight(8);
-                string[] lines = message.Split("\n");
-                foreach (var line in lines)
-                { Console.WriteLine($"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : {line}"); }
+                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
+                { Console.WriteLine(line); }
                 Console.ResetColor();
             }
         }
@@ -185,9 +172,8 @@ namespace Eva.Services
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 string Severity = "Info".PadRight(8);
-                string[] lines = message.Split("\n");
-                foreach (var line in lines)
-                { Console.WriteLine($"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : {line}"); }
+                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
+                { Console.WriteLine(line); }
                 Console.ResetColor();
             }
         }
@@ -203,9 +189,8 @@ namespace Eva.Services
             {
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
                 string Severity = "Warning".PadRight(8);
-                string[] lines = message.Split("\n");
-                foreach (var line in lines)
-                { Console.WriteLine($"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : {line}"); }
+                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
+                { Console.WriteLine(line); }
                 Console.ResetColor();
             }
         }
@@ -218,10 +203,45 @@ namespace Eva.Services
         private static void Neutral(string message, string source = "")
         {
             string Severity = "Normal".PadRight(8);
-            string[] lines = message.Split("\n");
-            foreach (var line in lines)
-            { Console.WriteLine($"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : {line}"); }
+            foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
+            { Console.WriteLine(line); }
+            //foreach (var line in FormatText(message))
+            //{ Console.WriteLine($"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : {line}"); }
             Console.ResetColor();
+        }
+
+        private static string FormatDate()
+        { return DateTime.Now.ToString("hh:mm:ss"); }
+        
+        private static string[] FormatFullText(string message, string prefix)
+        {
+            var bufferLen = Console.BufferWidth;
+            var prefixLen = prefix.Length;
+            var lines = message.Split("\n");
+            List<string> result = new List<string>();
+            foreach (var line in lines)
+            {
+                if (line.Length > bufferLen - prefixLen)
+                {
+                    var s = prefix;
+                    var currLine = s;
+                    foreach (var word in line.Split(' '))
+                    {
+                        if ($"{currLine} {word}".Length >= bufferLen)
+                        {
+                            s += $"\n{prefix}";
+                            currLine = prefix;
+                        }
+                        currLine += " " + word;
+                        s += " " + word;
+                    }
+                    result.Add(s.Split("\n")[0]);
+                    result.Add(s.Split("\n")[1]);
+                }
+                else
+                { result.Add($"{prefix} {line}"); }
+            }
+            return result.ToArray();
         }
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -73,7 +74,43 @@ namespace Eva
                 $"{Assembly.GetExecutingAssembly().GetName().Name} " +
                 $"v{GetVersion()}\n" +
                 $"_________\n", "Eva start");
+            Console.Title = $"{Assembly.GetExecutingAssembly().GetName().Name} v{GetVersion()}";
+            List<Thread> threadList = new List<Thread>();
+            Thread twitterThread = new Thread(new ThreadStart(TwitterThread));
+            twitterThread.Name = "TwitterThread";
+            Thread discordThread = new Thread(new ThreadStart(DiscordThread));
+            discordThread.Name = "DiscordThread";
+            threadList.Add(twitterThread);
+            threadList.Add(discordThread);
+            foreach (var thread in threadList)
+            {
+                thread.Start();
+                if (thread.ThreadState == System.Threading.ThreadState.Running)
+                { Logger.Log(Logger.info, $"Thread {thread.Name ?? ""} started."); }
+            }
+            while(true)
+            {
+                if (!twitterThread.IsAlive)
+                {
+                    Logger.Log(Logger.warning, $"Thread {twitterThread.Name} exited. Restarting...", "ThreadWatcher");
+                    try
+                    { twitterThread.Abort(); }
+                    catch
+                    { Logger.Log(Logger.warning, $"Could not Abort {twitterThread.Name}", "ThreadWatcher"); }
+                    try
+                    { twitterThread.Start(); }
+                    catch
+                    { Logger.Log(Logger.warning, $"Could not Start {twitterThread.Name}", "ThreadWatcher"); }
+                }
+                await Task.Delay(60000);
+            }
+            await Task.Delay(-1);
+        }
 
+
+        public void TwitterThread()
+        {
+            var thread = Thread.CurrentThread;
             // Set up your credentials (https://apps.twitter.com)
             ITwitterCredentials creds = GetTwitterCredencials();
             Auth.SetCredentials(creds);
@@ -90,8 +127,56 @@ namespace Eva
                 $"  Desc        : {authenticatedUser.Description.Replace("\n", "")}\n" +
                 $"  Followers   : {authenticatedUser.FollowersCount}\n" +
                 $"  _____________",
-                "Eva start");
+                thread.Name ?? "");
 
+            var stream = Tweetinvi.Stream.CreateFilteredStream();
+            // Thread2
+            Thread t = new Thread(() =>
+            {
+                Logger.Log(Logger.info, $"Thread {Thread.CurrentThread.Name} started", Thread.CurrentThread.Name);
+                var user = User.GetAuthenticatedUser();
+                stream.AddTrack("EDPostcards");
+                stream.AddTrack("ED_Postcards");
+
+                stream.MatchingTweetReceived += (sender, args) =>
+                {
+                    Logger.Log(Logger.info, "Received tweet matching filters.");
+                    var tweet = args.Tweet;
+                    if (TweetService.CheckTweet(tweet, user))
+                    {
+                        Logger.Log(Logger.neutral, $" [ TWEETING ] \n{tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", "StreamListener");
+                        TweetService.SendTweet(tweet);
+                    }
+                };
+                stream.StartStreamMatchingAnyCondition();
+            });
+            t.Name = "StreamListener";
+            stream.DisconnectMessageReceived += (sender, args) =>
+            {
+                Logger.Log(Logger.warning, $"DisconnectMessageReceived triggered. \n{args.DisconnectMessage}", "DisconnectMessage");
+                try
+                { t.Abort(); }
+                catch
+                { Logger.Log(Logger.warning, $"Could not Abort {t.Name}", "DisconnectMessage"); }
+                t.Start();
+            };
+            stream.StreamStopped += (sender, args) =>
+            {
+                Logger.Log(Logger.warning, $"StreamStopped triggered. \n{args?.DisconnectMessage}\n{args?.Exception?.Message ?? ""}", "StreamStopped");
+                try
+                { t.Abort(); }
+                catch
+                { Logger.Log(Logger.warning, $"Could not Abort {t.Name}", "StreamStopped"); }
+                t.Start();
+            };
+            t.Start();
+            t.Join();
+            Logger.Log(Logger.info, $"Thread {thread.Name} stopping : StreamThread exited.");
+        }
+
+        public async void DiscordThread()
+        {
+            var thread = Thread.CurrentThread;
             client = new DiscordSocketClient(new DiscordSocketConfig
             { LogLevel = LogSeverity.Debug });
             client.Log += (LogMessage message) =>
@@ -99,57 +184,35 @@ namespace Eva
                 Logger.Log((int)message.Severity, message.Message, message.Source);
                 return Task.CompletedTask;
             };
+            
             commands = new CommandService();
+            commands.Log += (LogMessage message) =>
+            {
+                Logger.Log((int)message.Severity, message.Message, message.Source);
+                return Task.CompletedTask;
+            };
             await InstallCommands();
 
-            await client.LoginAsync(TokenType.Bot,GetDiscordCredencials());
+            await client.LoginAsync(TokenType.Bot, GetDiscordCredencials());
             await client.StartAsync();
 
-            client.Ready += () =>
+            client.Ready += async () =>
             {
                 Logger.Log(Logger.neutral, $"{client.CurrentUser.Username}#{client.CurrentUser.Discriminator} is connected !\n\n" +
-                    $"__[ CONNECTED TO ]__\n", "Eva Login");
+                    $"__[ CONNECTED TO ]__\n", thread.Name ?? "EvaLogin");
                 foreach (var guild in client.Guilds)
                 {
                     Logger.Log(Logger.neutral,
                         $"\t_______________\n" +
                         $"\t{guild.Name} \n" +
                         $"\tOwned by {guild.Owner.Nickname}#{guild.Owner.Discriminator}\n" +
-                        $"\t{guild.MemberCount} members", "Eva Login");
+                        $"\t{guild.MemberCount} members", thread.Name ?? "EvaLogin");
                 }
-                Logger.Log(Logger.neutral, "\t_______________", "Eva Login");
-                Console.Title = $"{Assembly.GetExecutingAssembly().GetName().Name} v{GetVersion()}";
-                SetDefaultStatus(client);
-                return Task.CompletedTask;
+                Logger.Log(Logger.neutral, "\t_______________", thread.Name ?? "EvaLogin");
+                await SetDefaultStatus(client);
+                //return Task.CompletedTask;
             };
-
-            var stream = Tweetinvi.Stream.CreateFilteredStream();
-
-            // Thread2
-            Thread t = new Thread(() =>
-            {
-                Thread.CurrentThread.Name = "StreamListener";
-                var user = User.GetAuthenticatedUser();
-                stream.AddTrack("EDPostcards");
-                stream.AddTrack("ED_Postcards");
-                stream.MatchingTweetReceived += (sender, args) =>
-                {
-                    var tweet = args.Tweet;
-                    if (TweetService.CheckTweet(tweet, user))
-                    {
-                        Logger.Log(Logger.neutral, $"{tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", "StreamListener");
-                        TweetService.SendTweet(tweet);
-                    }
-                };
-                stream.StartStreamMatchingAnyCondition();
-
-            });
-            t.Start();
-
-            t.Join();
-            await Task.Delay(-1);
         }
-
         /// <summary>
         /// Install commands for the bot
         /// </summary>

@@ -5,9 +5,11 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <StartupObject>Eva.Eva</StartupObject>
     <Company>FoxliCorp</Company>
-    <Version>1.3</Version>
+    <Version>1.4</Version>
     <Description>Eva is the bot written in C# to replace the current EDPostcards_BOT.py</Description>
     <Copyright>FoxlyCorp</Copyright>
+    <ApplicationIcon>Resources\Eva.1.4.ico</ApplicationIcon>
+    <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,6 +23,21 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
     <PackageReference Include="TweetinviAPI" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
