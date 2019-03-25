@@ -197,7 +197,7 @@ namespace Eva.Modules
         /// </summary>
         /// <param name="stat"></param>
         /// <returns></returns>
-        [Command("quote")]
+        [Command("quote", RunMode = RunMode.Async)]
         [Summary("Quote a tweet")]
         [RequireOwner]
         [RequireContext(ContextType.DM)]
@@ -218,6 +218,30 @@ namespace Eva.Modules
             { Logger.Log(Logger.warning, "Whoopsie", "Discord Quote"); }
         }
         #endregion quote
+
+        #region check
+        /// <summary>
+        /// STATUS - Command status
+        /// </summary>
+        /// <param name="stat"></param>
+        /// <returns></returns>
+        [Command("check", RunMode = RunMode.Async)]
+        [Summary("Check a tweet")]
+        [RequireOwner]
+        [RequireContext(ContextType.DM)]
+        public async Task Check(string url = "")
+        {
+            try
+            {
+                var id = Int64.Parse(url.Split('/')[url.Split('/').Length - 1]);
+                var tweet = Tweet.GetTweet(id);
+                string msg = TweetService.CheckTweetDetails(tweet, User.GetAuthenticatedUser());
+                await ReplyAsync($"TWEET TESTS : ```{msg}```",deleteafter: TimeSpan.FromSeconds(10));
+            }
+            catch
+            { Logger.Log(Logger.warning, "Whoopsie", "Discord Check"); }
+        }
+        #endregion check
 
         #region role
         [Command("role", RunMode = RunMode.Async), Summary("Give the user the Photograph Role")]

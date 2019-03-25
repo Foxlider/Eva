@@ -58,6 +58,31 @@ namespace Eva.Services
             return false;
         }
 
+        public static string CheckTweetDetails(ITweet tweet, Tweetinvi.Models.IUser user)
+        {
+            string msg = "Tweet checks : ";
+            if (!tweet.IsRetweet)
+            { msg += "\nIsNotRetweet        : PASSED"; }
+            else
+            { msg += "\nIsNotRetweet        : FAILED"; }
+
+            if (tweet.CreatedBy.Id != user.Id)
+            { msg += "\nNotSentByBot        : PASSED"; }
+            else
+            { msg += "\nNotSentByBot        : FAILED"; }
+
+            if (tweet.InReplyToStatusId == null)
+            { msg += "\nNotAReply           : PASSED"; }
+            else
+            { msg += "\nNotAReply           : FAILED"; }
+
+            if (tweet.Media.Count > 0)
+            { msg += "\nHasMedias           : PASSED"; }
+            else
+            { msg += "\nHasMedias           : FAILED"; }
+            return msg;
+        }
+
         public static ITweet SendTweet(ITweet tweet)
         {
             string str = String.Format(startString[Eva.rand.Next(0, startString.Count)], tweet.CreatedBy.ScreenName, tweet.Media.Count);
@@ -185,5 +210,7 @@ namespace Eva.Services
             return new string(Enumerable.Repeat(chars, length)
                                         .Select(s => s[Eva.rand.Next(s.Length)]).ToArray());
         }
+
+        
     }
 }
