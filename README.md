@@ -46,3 +46,30 @@ Added :
 
 Fixed : 
  - Fixed DownloadMedia would download uncompatible Medias
+
+### [ v1.3 ]
+Added :
+ - Command role to give a user the photograph role
+ - Command send to send pictures from Discord to twitter
+ - RequireRole Precondition
+
+Fixed :
+ - Fixed DownloadMedia would download uncompatible Medias
+
+### [ v1.4 ]
+Added :
+ - Check command to check if a tweet is able to be quoted
+ - Thread watcher and Twitter Restarter
+ - Icon
+ - Improved logs to Console
+
+Fixed :
+ - Crash on logging to file
+
+### [ v1.5 ]
+Added :
+ - Improved logs to Console
+
+Fixed :
+ - Fixed log time to 24h format
+ - Fixed minor text issues

@@ -21,8 +21,18 @@ namespace Eva.Services
 
         public static object Locked = new object();
 
-        private static List<string> severities = new List<string>
-        { "Critical", "Error", "Warning", "Info", "Verbose", "Debug", "Neutral" };
+        private static readonly List<(string, ConsoleColor)> logLevels = new List<(string, ConsoleColor)>
+        {
+            //  (Item1, Item2)
+            ("Critical", ConsoleColor.DarkRed),
+            ("Error", ConsoleColor.Red),
+            ("Warning", ConsoleColor.DarkYellow),
+            ("Info", ConsoleColor.Green),
+            ("Verbose", ConsoleColor.Gray),
+            ("Debug", ConsoleColor.Blue),
+            ("Neutral", ConsoleColor.White)
+        };
+
 
         private static string LogDirectory { get; set; }
         private static string LogFile { get; set; } 
@@ -49,32 +59,7 @@ namespace Eva.Services
             if (source == null)
             { source = ""; }
             LogToFile(Severity, message, source);
-            switch (Severity)
-            {
-                case critical:
-                    Critical(message, source);
-                    break;
-                case error:
-                    Error(message, source);
-                    break;
-                case warning:
-                    Warning(message, source);
-                    break;
-                case info:
-                    Information(message, source);
-                    break;
-                case verbose:
-                    Verbose(message, source);
-                    break;
-                case debug:
-                    Debug(message, source);
-                    break;
-                case neutral:
-                    Neutral(message, source);
-                    break;
-                default:
-                    break;
-            }
+            LogToConsole(Severity, message, source);
         }
 
         private static void LogToFile(int severity, string message, string source)
@@ -83,7 +68,8 @@ namespace Eva.Services
             {
                 if (Eva.logLvl >= severity)
                 {
-                    string Severity = severities[(severity % severities.Count + severities.Count) % severities.Count].PadRight(8);
+                    var currentlevel = logLevels[(severity % logLevels.Count + logLevels.Count) % logLevels.Count];
+                    string Severity = currentlevel.Item1.PadRight(8);
                     string[] lines = message.Split("\n");
                     List<string> formatLines = new List<string>();
                     foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : "))
@@ -94,124 +80,31 @@ namespace Eva.Services
         }
 
         /// <summary>
-        /// Logging debug (lvl 5)
+        /// Logging message to console
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="source"></param>
-        private static void Debug(string message, string source = "")
+        /// <param name="severity">Severity level of the message</param>
+        /// <param name="message">Message sent</param>
+        /// <param name="source">Source of the message</param>
+        /// <param name="color">Console Color for the message</param>
+        private static void LogToConsole(int severity, string message, string source)
         {
-            if (Eva.logLvl >= 5)
+            if (Eva.logLvl >= severity)
             {
-                Console.ForegroundColor = ConsoleColor.Blue;
-                string Severity = "Debug".PadRight(8);
-                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
+                var currentlevel = logLevels[(severity % logLevels.Count + logLevels.Count) % logLevels.Count];
+                if (currentlevel.Item2 != ConsoleColor.White)
+                { Console.ForegroundColor = currentlevel.Item2; } //Change default color if needed
+                foreach (var line in FormatFullText(message, $"[{currentlevel.Item1.PadRight(8)} {source.PadLeft(15)}][{FormatDate()}] : "))
                 { Console.WriteLine(line); }
                 Console.ResetColor();
             }
         }
 
         /// <summary>
-        /// Logging Verbose (lvl 4)
+        /// Simple date formatter
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="source"></param>
-        private static void Verbose(string message, string source = "")
-        {
-            if (Eva.logLvl >= 4)
-            {
-                Console.ForegroundColor = ConsoleColor.Gray;
-                string Severity = "Verbose".PadRight(8);
-                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
-                { Console.WriteLine(line); }
-                Console.ResetColor();
-            }
-        }
-
-        /// <summary>
-        /// Logging Error (lvl 1)
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="source"></param>
-        private static void Error(string message, string source = "")
-        {
-            if (Eva.logLvl >= 1)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                string Severity = "Error".PadRight(8);
-                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
-                { Console.WriteLine(line); }
-                Console.ResetColor();
-            }
-        }
-
-        /// <summary>
-        /// Logging Critical (lvl 0)
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="source"></param>
-        private static void Critical(string message, string source = "")
-        {
-            if (Eva.logLvl >= 0)
-            {
-                Console.ForegroundColor = ConsoleColor.DarkRed;
-                string Severity = "Critical".PadRight(8);
-                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
-                { Console.WriteLine(line); }
-                Console.ResetColor();
-            }
-        }
-
-        /// <summary>
-        /// Logging Information (lvl 3) DEFAULT VALUE
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="source"></param>
-        private static void Information(string message, string source = "")
-        {
-            if (Eva.logLvl >= 3)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                string Severity = "Info".PadRight(8);
-                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
-                { Console.WriteLine(line); }
-                Console.ResetColor();
-            }
-        }
-
-        /// <summary>
-        /// Logging Warning (lvl 2)
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="source"></param>
-        private static void Warning(string message, string source = "")
-        {
-            if (Eva.logLvl >= 2)
-            {
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                string Severity = "Warning".PadRight(8);
-                foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
-                { Console.WriteLine(line); }
-                Console.ResetColor();
-            }
-        }
-
-        /// <summary>
-        /// Logging Message
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="source"></param>
-        private static void Neutral(string message, string source = "")
-        {
-            string Severity = "Normal".PadRight(8);
-            foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : "))
-            { Console.WriteLine(line); }
-            //foreach (var line in FormatText(message))
-            //{ Console.WriteLine($"[{Severity} {source.PadLeft(15)}][{FormatDate()}] : {line}"); }
-            Console.ResetColor();
-        }
-
+        /// <returns></returns>
         private static string FormatDate()
-        { return DateTime.Now.ToString("hh:mm:ss"); }
+        { return DateTime.Now.ToString("HH:mm:ss"); }
         
         private static string[] FormatFullText(string message, string prefix)
         {

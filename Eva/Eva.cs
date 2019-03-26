@@ -23,8 +23,7 @@ namespace Eva
     {
         private CommandService commands;
         public static DiscordSocketClient client;
-        private IAuthenticationContext _authenticationContext;
-        private IServiceProvider services;
+        private readonly IServiceProvider services;
         public static IConfigurationRoot Configuration;
         public static Random rand = new Random();
         internal static int logLvl = 3;
@@ -70,16 +69,15 @@ namespace Eva
         {
             Logger.Log(Logger.info, 
                 $"Booting up...\n" +
-                $"_________\n" +
-                $"{Assembly.GetExecutingAssembly().GetName().Name} " +
-                $"v{GetVersion()}\n" +
-                $"_________\n", "Eva start");
+                $"┌───────────┐\n" +
+                $"│ {Assembly.GetExecutingAssembly().GetName().Name} v{GetVersion()} │\n" +
+                $"└───────────┘\n", "Eva start");
             Console.Title = $"{Assembly.GetExecutingAssembly().GetName().Name} v{GetVersion()}";
             List<Thread> threadList = new List<Thread>();
-            Thread twitterThread = new Thread(new ThreadStart(TwitterThread));
-            twitterThread.Name = "TwitterThread";
-            Thread discordThread = new Thread(new ThreadStart(DiscordThread));
-            discordThread.Name = "DiscordThread";
+            Thread twitterThread = new Thread(new ThreadStart(TwitterThread))
+            { Name = "TwitterThread" };
+            Thread discordThread = new Thread(new ThreadStart(DiscordThread))
+            { Name = "DiscordThread" };
             threadList.Add(twitterThread);
             threadList.Add(discordThread);
             foreach (var thread in threadList)
@@ -104,7 +102,6 @@ namespace Eva
                 }
                 await Task.Delay(60000);
             }
-            await Task.Delay(-1);
         }
 
 
@@ -122,11 +119,11 @@ namespace Eva
             var authenticatedUser = User.GetAuthenticatedUser();
             Logger.Log(Logger.neutral,
                 $"{authenticatedUser.Name} is connected :\n" +
-                $"  _____________\n" +
-                $"  ScreenName  : @{authenticatedUser.ScreenName}\n" +
-                $"  Desc        : {authenticatedUser.Description.Replace("\n", "")}\n" +
-                $"  Followers   : {authenticatedUser.FollowersCount}\n" +
-                $"  _____________",
+                $"  ┌──────────────\n" +
+                $"  │ScreenName  : @{authenticatedUser.ScreenName}\n" +
+                $"  │Desc        : {authenticatedUser.Description.Replace("\n", "")}\n" +
+                $"  │Followers   : {authenticatedUser.FollowersCount}\n" +
+                $"  └──────────────",
                 thread.Name ?? "");
 
             var stream = Tweetinvi.Stream.CreateFilteredStream();
@@ -149,8 +146,8 @@ namespace Eva
                     }
                 };
                 stream.StartStreamMatchingAnyCondition();
-            });
-            t.Name = "StreamListener";
+            })
+            { Name = "StreamListener" };
             stream.DisconnectMessageReceived += (sender, args) =>
             {
                 Logger.Log(Logger.warning, $"DisconnectMessageReceived triggered. \n{args.DisconnectMessage}", "DisconnectMessage");
@@ -199,16 +196,17 @@ namespace Eva
             client.Ready += async () =>
             {
                 Logger.Log(Logger.neutral, $"{client.CurrentUser.Username}#{client.CurrentUser.Discriminator} is connected !\n\n" +
-                    $"__[ CONNECTED TO ]__\n", thread.Name ?? "EvaLogin");
+                    $"__[ CONNECTED TO ]__\n  ┌─", thread.Name ?? "EvaLogin");
                 foreach (var guild in client.Guilds)
                 {
                     Logger.Log(Logger.neutral,
-                        $"\t_______________\n" +
-                        $"\t{guild.Name} \n" +
-                        $"\tOwned by {guild.Owner.Nickname}#{guild.Owner.Discriminator}\n" +
-                        $"\t{guild.MemberCount} members", thread.Name ?? "EvaLogin");
-                }
-                Logger.Log(Logger.neutral, "\t_______________", thread.Name ?? "EvaLogin");
+                        $"  │┌───────────────\n" +
+                        $"  ││ {guild.Name} \n" +
+                        $"  ││ Owned by {guild.Owner.Nickname}#{guild.Owner.Discriminator}\n" +
+                        $"  ││ {guild.MemberCount} members\n" +
+                        $"  │└───────────────", thread.Name ?? "EvaLogin");
+                }           
+                Logger.Log(Logger.neutral, "  └─", thread.Name ?? "EvaLogin");
                 await SetDefaultStatus(client);
                 //return Task.CompletedTask;
             };
@@ -442,7 +440,6 @@ namespace Eva
             Environment.Exit(0);
         }
     }
-
 
     internal class EvaConfig
     {
