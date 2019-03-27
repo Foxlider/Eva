@@ -1,14 +1,13 @@
-using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
 using Moq;
-using Eva;
+using NUnit.Framework;
+using Tweetinvi;
 using Tweetinvi.Models;
 using Tweetinvi.Models.Entities;
-using System.Collections.Generic;
-using Tweetinvi;
-using System;
-using Microsoft.Extensions.Configuration;
 
-namespace Tests
+namespace EvaTests
 {
     public class Tests
     {
@@ -27,27 +26,26 @@ namespace Tests
         #region MOCKS
         private Mock<ITweet> CreateMockTweet(List<string> medias, bool isRetweet, string text, IUser user, long? replyTo)
         {
-            var Tweet = new Mock<ITweet>();
+            var tweet = new Mock<ITweet>();
             List<IMediaEntity> mediaList = new List<IMediaEntity>();
-            foreach (var str in medias)
-            {
-                mediaList.Add(null);
-            }
-            Tweet.Setup(t => t.Media).Returns(mediaList);
-            Tweet.Setup(t => t.IsRetweet).Returns(isRetweet);
-            Tweet.Setup(t => t.CreatedBy).Returns(user);
-            Tweet.Setup(t => t.InReplyToStatusId).Returns(replyTo);
-            return Tweet;
+            foreach (var _ in medias)
+            { mediaList.Add(null); }
+            tweet.Setup(t => t.Media).Returns(mediaList);
+            tweet.Setup(t => t.IsRetweet).Returns(isRetweet);
+            tweet.Setup(t => t.CreatedBy).Returns(user);
+            tweet.Setup(t => t.Text).Returns(text);
+            tweet.Setup(t => t.InReplyToStatusId).Returns(replyTo);
+            return tweet;
         }
 
         private Mock<IUser> CreateMockUser(string name, string screenName, string desc, long id)
         {
-            var User = new Mock<IUser>();
-            User.Setup(u => u.Name).Returns(name);
-            User.Setup(u => u.ScreenName).Returns(screenName);
-            User.Setup(u => u.Id).Returns(id);
-            User.Setup(u => u.Description).Returns(desc);
-            return User;
+            var user = new Mock<IUser>();
+            user.Setup(u => u.Name).Returns(name);
+            user.Setup(u => u.ScreenName).Returns(screenName);
+            user.Setup(u => u.Id).Returns(id);
+            user.Setup(u => u.Description).Returns(desc);
+            return user;
         }
         #endregion
 
@@ -60,7 +58,7 @@ namespace Tests
         }
 
         [Test]
-        public void CheckTweetSentIsRT()
+        public void CheckTweetSentIsRt()
         {
             IUser user = CreateMockUser("Eva", "EvaBot", "SomeDesc", 123456).Object;
             ITweet tweet = CreateMockTweet(new List<string> { "some media", "more medias" }, true, "Some Tweet", user, null).Object;

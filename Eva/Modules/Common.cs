@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Tweetinvi;
@@ -30,19 +29,22 @@ namespace Eva.Modules
         /// Override ReplyAsync
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="isTTS"></param>
+        /// <param name="isTts"></param>
         /// <param name="embed"></param>
         /// <param name="options"></param>
         /// <param name="deleteafter"></param>
         /// <returns></returns>
-        protected async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, TimeSpan? deleteafter = null)
+        private async Task<IUserMessage> ReplyAsync(string message = null, bool isTts = false, Embed embed = null, RequestOptions options = null, TimeSpan? deleteafter = null)
         {
-            var msg = await base.ReplyAsync(message, isTTS, embed, options);
-            if (deleteafter != null)
-            {
-                Thread.Sleep(TimeSpan.FromMilliseconds(deleteafter.Value.TotalMilliseconds));
-                await msg.DeleteAsync();
-            }
+            var msg = await base.ReplyAsync(message, isTts, embed, options);
+            if (deleteafter == null) return msg;
+            var t = new Thread(async () =>
+                {
+                    Thread.Sleep(TimeSpan.FromMilliseconds(deleteafter.Value.TotalMilliseconds));
+                    await msg.DeleteAsync();
+                })
+                { IsBackground = true };
+            t.Start();
             return msg;
         }
 
@@ -52,7 +54,7 @@ namespace Eva.Modules
         /// <param name="service"></param>
         public Common(CommandService service)
         {
-            _client = Eva.client;
+            _client = Eva.Client;
             _service = service;
             _config = Eva.Configuration;
         }
@@ -73,8 +75,8 @@ namespace Eva.Modules
             {
                 try
                 { await Context.Message.DeleteAsync(); }
-                catch { }
-                string prefix = _config["prefix"];
+                catch { /*ignored*/ }
+                var prefix = _config["prefix"];
                 var builder = new EmbedBuilder()
                 {
                     Color = new Color(114, 137, 218),
@@ -150,13 +152,13 @@ namespace Eva.Modules
         {
             try
             { await Context.Message.DeleteAsync(); }
-            catch { }
+            catch { /*ignored*/}
             var arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture;
-            var OSdesc = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+            var osDesc = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
 
             var builder = new EmbedBuilder();
 
-            builder.WithTitle($"Bot Informations");
+            builder.WithTitle("Bot Informations");
             builder.WithDescription($"{_client.CurrentUser.Mention} - {_client.CurrentUser.Username}#{_client.CurrentUser.Discriminator}");
 
             EmbedFieldBuilder field = new EmbedFieldBuilder
@@ -179,7 +181,7 @@ namespace Eva.Modules
             {
                 IsInline = true,
                 Name = "Running on : ",
-                Value = $"{OSdesc} ({arch})"
+                Value = $"{osDesc} ({arch})"
             };
             builder.AddField(field);
 
@@ -195,7 +197,6 @@ namespace Eva.Modules
         /// <summary>
         /// STATUS - Command status
         /// </summary>
-        /// <param name="stat"></param>
         /// <returns></returns>
         [Command("quote", RunMode = RunMode.Async)]
         [Summary("Quote a tweet")]
@@ -209,13 +210,13 @@ namespace Eva.Modules
                 var tweet = Tweet.GetTweet(id);
                 if (TweetService.CheckTweet(tweet, User.GetAuthenticatedUser()))
                 {
-                    Logger.Log(Logger.neutral, $"QUOTING {tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", "Discord Quote");
+                    Logger.Log(Logger.Neutral, $"QUOTING {tweet.CreatedBy.ScreenName}\n{tweet.Text}\n{tweet.Media.Count} media files", "Discord Quote");
                     var response = TweetService.SendTweet(tweet);
                     await ReplyAsync($"Tweet have been quoted : {response.Url}");
                 }
             }
             catch
-            { Logger.Log(Logger.warning, "Whoopsie", "Discord Quote"); }
+            { Logger.Log(Logger.Warning, "Whoopsie", "Discord Quote"); }
         }
         #endregion quote
 
@@ -223,7 +224,6 @@ namespace Eva.Modules
         /// <summary>
         /// STATUS - Command status
         /// </summary>
-        /// <param name="stat"></param>
         /// <returns></returns>
         [Command("check", RunMode = RunMode.Async)]
         [Summary("Check a tweet")]
@@ -235,11 +235,12 @@ namespace Eva.Modules
             {
                 var id = Int64.Parse(url.Split('/')[url.Split('/').Length - 1]);
                 var tweet = Tweet.GetTweet(id);
-                string msg = TweetService.CheckTweetDetails(tweet, User.GetAuthenticatedUser());
+                var msg = TweetService.CheckTweetDetails(tweet, User.GetAuthenticatedUser());
                 await ReplyAsync($"TWEET TESTS : ```{msg}```",deleteafter: TimeSpan.FromSeconds(10));
+                Logger.Log(Logger.Warning, "Whoopsie", "Discord Check");
             }
             catch
-            { Logger.Log(Logger.warning, "Whoopsie", "Discord Check"); }
+            { Logger.Log(Logger.Warning, "Whoopsie", "Discord Check"); }
         }
         #endregion check
 
@@ -249,8 +250,8 @@ namespace Eva.Modules
         public async Task Role()
         {
             var user = Context.User as SocketGuildUser;
-            var role = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Photograph");
-            if (!user.Roles.Contains(role))
+            var role = ((IGuildUser) user)?.Guild.Roles.FirstOrDefault(x => x.Name == "Photograph");
+            if (user != null && !user.Roles.Contains(role))
             {
                 var tweetUser = User.GetUserFromScreenName(user.Nickname);
                 if (tweetUser != null)
@@ -269,7 +270,7 @@ namespace Eva.Modules
         #region send
         [Command("send", RunMode = RunMode.Async), Summary("Send pictures to Twitter.")]
         [RequireRole("Photograph")]
-        public async Task Poll([Remainder, Summary("The message to send")] string msg)
+        public async Task ImgSender()
         {
             List<IAttachment> attachments = new List<IAttachment>();
             var tempAttachments = new List<IAttachment>();
@@ -304,7 +305,7 @@ namespace Eva.Modules
             }
             attachments.AddRange(tempAttachments);
             await botMsg.DeleteAsync();
-            var message = Context.Message.Content.Substring(Context.Message.Content.IndexOf("send") + "send".Length);
+            var message = Context.Message.Content.Substring(Context.Message.Content.IndexOf("send", StringComparison.Ordinal) + "send".Length);
             var user = await Context.Guild.GetUserAsync(Context.User.Id);
             TweetService.DiscordTweet(message, user, attachments);
             typing.Dispose();
@@ -320,14 +321,14 @@ namespace Eva.Modules
         {
             try
             { await Context.Message.DeleteAsync(); }
-            catch { }
+            catch { /*ignored*/ }
             if (log <= 5)
             {
-                Eva.logLvl = log;
+                Eva.LogLvl = log;
                 await Context.User.SendMessageAsync($"Setting Log Level to {log}");
             }
             else
-            { await Context.User.SendMessageAsync($"Please enter a value between 0 (Critical Messages) and 5(Debug messages)"); }
+            { await Context.User.SendMessageAsync("Please enter a value between 0 (Critical Messages) and 5(Debug messages)"); }
         }
         #endregion
 
