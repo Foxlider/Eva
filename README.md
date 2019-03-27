@@ -73,3 +73,11 @@ Added :
 Fixed :
  - Fixed log time to 24h format
  - Fixed minor text issues
+
+### [ v1.6 ]
+Added : 
+ - Reworked thread handler
+ - Code cleanup
+
+Fixed : 
+ - Crash when creating images in a non-existant folder

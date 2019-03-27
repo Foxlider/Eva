@@ -59,15 +59,5 @@ namespace Eva.Properties {
                 resourceCulture = value;
             }
         }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] Eva_1_4 {
-            get {
-                object obj = ResourceManager.GetObject("Eva_1_4", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
     }
 }

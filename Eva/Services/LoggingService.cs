@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
-using System.Text;
-using System.Threading.Tasks;
+using System.Linq;
+using Discord;
 
 namespace Eva.Services
 {
@@ -11,17 +12,17 @@ namespace Eva.Services
     /// </summary>
     public class Logger
     {
-        public const int neutral = -1;
-        public const int critical = 0;
-        public const int error = 1;
-        public const int warning = 2;
-        public const int info = 3;
-        public const int verbose = 4;
-        public const int debug = 5;
+        public const int Neutral = -1;
+        public const int Critical = 0;
+        public const int Error = 1;
+        public const int Warning = 2;
+        public const int Info = 3;
+        public const int Verbose = 4;
+        public const int Debug = 5;
 
-        public static object Locked = new object();
+        private static readonly object Locked = new object();
 
-        private static readonly List<(string, ConsoleColor)> logLevels = new List<(string, ConsoleColor)>
+        private static readonly List<(string, ConsoleColor)> LogLevels = new List<(string, ConsoleColor)>
         {
             //  (Item1, Item2)
             ("Critical", ConsoleColor.DarkRed),
@@ -45,37 +46,32 @@ namespace Eva.Services
             LogDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
             if (!Directory.Exists(LogDirectory))
             { Directory.CreateDirectory(LogDirectory); }
-            LogFile = Path.Combine(LogDirectory, $"EvaLogs-{DateTime.Now.ToString("yyyy-MM-dd")}.txt");
+            LogFile = Path.Combine(LogDirectory, $"EvaLogs-{DateTime.Now:yyyy-MM-dd}.txt");
         }
 
         /// <summary>
         /// Log message function handling Discord Logging
         /// </summary>
-        /// <param name="Severity">Message's severity</param>
+        /// <param name="severity">Message's severity</param>
         /// <param name="message">Message's text</param>
         /// <param name="source">Message's source</param>
-        public static void Log(int Severity, string message, string source = "")
+        public static void Log(int severity, string message, string source = "")
         {
             if (source == null)
             { source = ""; }
-            LogToFile(Severity, message, source);
-            LogToConsole(Severity, message, source);
+            LogToFile(severity, message, source);
+            LogToConsole(severity, message, source);
         }
 
         private static void LogToFile(int severity, string message, string source)
         {
             lock (Locked)
             {
-                if (Eva.logLvl >= severity)
-                {
-                    var currentlevel = logLevels[(severity % logLevels.Count + logLevels.Count) % logLevels.Count];
-                    string Severity = currentlevel.Item1.PadRight(8);
-                    string[] lines = message.Split("\n");
-                    List<string> formatLines = new List<string>();
-                    foreach (var line in FormatFullText(message, $"[{Severity} {source.PadLeft(20)}][{DateTime.Now.ToString()}] : "))
-                    { formatLines.Add(line); }
-                    File.AppendAllLines(LogFile, formatLines);
-                }
+                if (Eva.LogLvl < severity) return;
+                var currentlevel = LogLevels[(severity % LogLevels.Count + LogLevels.Count) % LogLevels.Count];
+                var logName      = currentlevel.Item1.PadRight(8);
+                var formatLines  = FormatFullText(message, $"[{logName} {source.PadLeft(20)}][{DateTime.Now.ToString(CultureInfo.CurrentCulture)}] : ").ToList();
+                File.AppendAllLines(LogFile, formatLines);
             }
         }
 
@@ -85,18 +81,18 @@ namespace Eva.Services
         /// <param name="severity">Severity level of the message</param>
         /// <param name="message">Message sent</param>
         /// <param name="source">Source of the message</param>
-        /// <param name="color">Console Color for the message</param>
         private static void LogToConsole(int severity, string message, string source)
         {
-            if (Eva.logLvl >= severity)
-            {
-                var currentlevel = logLevels[(severity % logLevels.Count + logLevels.Count) % logLevels.Count];
-                if (currentlevel.Item2 != ConsoleColor.White)
-                { Console.ForegroundColor = currentlevel.Item2; } //Change default color if needed
-                foreach (var line in FormatFullText(message, $"[{currentlevel.Item1.PadRight(8)} {source.PadLeft(15)}][{FormatDate()}] : "))
-                { Console.WriteLine(line); }
-                Console.ResetColor();
-            }
+            if (Eva.LogLvl < severity) return;
+            string logName;
+            ConsoleColor consoleColor;
+            lock (Locked)
+            { (logName, consoleColor) = LogLevels[(severity % LogLevels.Count + LogLevels.Count) % LogLevels.Count]; }
+            if (consoleColor != ConsoleColor.White)
+            { Console.ForegroundColor = consoleColor; } //Change default color if needed
+            foreach (var line in FormatFullText(message, $"[{logName.PadRight(8)} {source.PadLeft(15)}][{FormatDate()}] : "))
+            { Console.WriteLine(line); }
+            Console.ResetColor();
         }
 
         /// <summary>
@@ -106,12 +102,12 @@ namespace Eva.Services
         private static string FormatDate()
         { return DateTime.Now.ToString("HH:mm:ss"); }
         
-        private static string[] FormatFullText(string message, string prefix)
+        private static IEnumerable<string> FormatFullText(string message, string prefix)
         {
             var bufferLen = Console.BufferWidth;
             var prefixLen = prefix.Length;
             var lines = message.Split("\n");
-            List<string> result = new List<string>();
+            var result = new List<string>();
             foreach (var line in lines)
             {
                 if (line.Length > bufferLen - prefixLen)
@@ -135,6 +131,12 @@ namespace Eva.Services
                 { result.Add($"{prefix} {line}"); }
             }
             return result.ToArray();
+        }
+
+        internal static void Log(LogMessage logMessage)
+        {
+            LogToFile((int)logMessage.Severity, logMessage.Message, logMessage.Source?? "");
+            LogToConsole((int)logMessage.Severity, logMessage.Message, logMessage.Source ?? "");
         }
     }
 }
