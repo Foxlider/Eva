@@ -126,8 +126,11 @@ namespace Eva.Services
                     var t1 = DateTime.Now;
                     var mediaPath = DownloadMedia(media, user.Nickname);
                     var t2 = DateTime.Now;
-                    var tweetMedia = Upload.UploadBinary(File.ReadAllBytes(mediaPath));
-                    medias.Add(tweetMedia);
+                    if (mediaPath != null)
+                    {
+                        var tweetMedia = Upload.UploadBinary(File.ReadAllBytes(mediaPath));
+                        medias.Add(tweetMedia);
+                    }
                     var t3 = DateTime.Now;
                     Logger.Log(Logger.Info, $"Discord Media Thread {name} finished in {(t3-t1).TotalMilliseconds}ms \n" +
                         $"  - Media downloaded in   {(t2 - t1).TotalMilliseconds}ms\n" +
@@ -151,16 +154,17 @@ namespace Eva.Services
             {
                 var ext = Path.GetExtension(media.MediaURLHttps);
                 var date = DateTime.Now;
-                if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "images", name)))
-                { Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name)); }
                 var path = Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date:dd_MM_yyyy_HH-mm-ss}--{RandomString(5)}{ext}");
-                if (ext != ".jpg" && ext != ".png")
+                if (ext == ".jpg" 
+                 || ext == ".png"
+                 || ext == ".bmp")
                 {
                     if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "images", name)))
                     { Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name)); }
                     client.DownloadFile(new Uri(media.MediaURLHttps), path);
+                    return path;
                 }
-                return path;
+                return null;
             }
         }
 
@@ -170,16 +174,17 @@ namespace Eva.Services
             {
                 var ext = Path.GetExtension(media.Url);
                 var date = DateTime.Now;
-                if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "images", name)))
-                { Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name)); }
                 var path = Path.Combine(AppContext.BaseDirectory, "images", name, $"IMG_{name}_{date:dd_MM_yyyy_HH-mm-ss}--{RandomString(5)}{ext}");
-                if (ext == ".jpg" || ext == ".png")
+                if (ext == ".jpg"
+                 || ext == ".png"
+                 || ext == ".bmp")
                 {
                     if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "images", name)))
                     { Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "images", name)); }
                     client.DownloadFile(new Uri(media.Url), path);
+                    return path;
                 }
-                return path;
+                return null;
             }
         }
 
@@ -188,19 +193,27 @@ namespace Eva.Services
             Logger.Log(Logger.Info, $"Discord Tweet Thread {name} started", "Discord Tweet");
             var guild = Eva.Client.GetGuild(514426990699216899);
             var channel = guild.GetTextChannel(514433570597634050);
+            var loglvl = Logger.Info;
             var threadMsg = "";
             foreach (var media in medias)
             {
-                var msg = "";
-                var tempStart = DateTime.Now;
-                if (medias.IndexOf(media) == 0)
+                if (media != null)
                 {
-                    msg = $"\"{tweet.FullText}\"\n - By @{tweet.CreatedBy.ScreenName} -";
+                    var msg = "";
+                    var tempStart = DateTime.Now;
+                    if (medias.IndexOf(media) == 0)
+                    { msg = $"\"{tweet.FullText}\"\n - By @{tweet.CreatedBy.ScreenName} -"; }
+                    try
+                    { await channel.SendFileAsync(media, msg); }
+                    catch (Exception e)
+                    {
+                        threadMsg += $"  - ERROR while uploading media : {e.Message}";
+                        loglvl = Logger.Warning;
+                    }
+                    threadMsg += $"  - Media Uploaded in     {(DateTime.Now - tempStart).TotalMilliseconds}ms\n";
                 }
-                await channel.SendFileAsync(media, msg);
-                threadMsg += $"  - Media Uploaded in     {(DateTime.Now - tempStart).TotalMilliseconds}ms\n";
             }
-            Logger.Log(Logger.Info, $"Discord Tweet Thread { name} finished in { (DateTime.Now - t1).TotalMilliseconds}ms\n{threadMsg}", "Discord Tweet");
+            Logger.Log(loglvl, $"Discord Tweet Thread { name} finished in { (DateTime.Now - t1).TotalMilliseconds}ms\n{threadMsg}", "Discord Tweet");
         }
 
         private static string RandomString(int length)
