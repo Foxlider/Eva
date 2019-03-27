@@ -334,8 +334,6 @@ namespace Eva.Modules
         #endregion COMMANDS
     }
 
-
-
     // Inherit from PreconditionAttribute
     public class RequireRoleAttribute : PreconditionAttribute
     {
