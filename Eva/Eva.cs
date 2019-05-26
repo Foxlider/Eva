@@ -137,10 +137,20 @@ namespace Eva
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls
                                                  | SecurityProtocolType.Tls11
                                                  | SecurityProtocolType.Tls12;
-            var authenticatedUser = User.GetAuthenticatedUser();
-            Logger.Log(Logger.Neutral,
+            try
+            {
+                var authenticatedUser = User.GetAuthenticatedUser(creds);
+                Logger.Log(Logger.Neutral,
                        $"{authenticatedUser.Name} is connected :\n  ┌──────────────\n  │ScreenName  : @{authenticatedUser.ScreenName}\n  │Desc        : {authenticatedUser.Description.Replace("\n", "")}\n  │Followers   : {authenticatedUser.FollowersCount}\n  └──────────────",
                 thread.Name ?? "");
+            }
+            catch (Exception e)
+            {
+                var latestException = ExceptionHandler.GetLastException();
+                Logger.Log(Logger.Error, $"Impossible to log in. Check logs for more details. {e.Message}\n" +
+                $"The following error occured : '{latestException?.TwitterDescription?? "NO EXCEPTION HANDLED BY TWEEETINVI"}'", thread.Name ?? "");
+                Environment.Exit(1);
+            }
 
             var streamThread = new Thread(StreamThread)
             { Name = "StreamThread" };
