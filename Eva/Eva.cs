@@ -143,7 +143,9 @@ namespace Eva
                                                  | SecurityProtocolType.Tls11
                                                  | SecurityProtocolType.Tls12;
             var authenticatedUser = User.GetAuthenticatedUser();
-            Logger.Log(Logger.Neutral,
+            try
+            {
+                Logger.Log(Logger.Neutral,
                        $"{authenticatedUser.Name} is connected :\n"
                      + $"  ┌──────────────\n"
                      + $"  │ ScreenName  : @{authenticatedUser.ScreenName}\n"
