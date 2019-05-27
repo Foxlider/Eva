@@ -89,8 +89,13 @@ namespace Eva
         /// <returns></returns>
         private async Task RunAsync()
         {
+            string version = $"{Assembly.GetExecutingAssembly().GetName().Name} v{GetVersion()}";
+
             Logger.Log(Logger.Info,
-                       $"Booting up...\n┌───────────┐\n│ {Assembly.GetExecutingAssembly().GetName().Name} v{GetVersion()} │\n└───────────┘\n", "Eva start");
+                       $"Booting up...\n"
+                     + $"┌─{new string('─', version.Length)}─┐\n"
+                     + $"│ {version} │\n"
+                     + $"└─{new string('─', version.Length)}─┘\n", "Eva start");
             Console.Title = $@"{Assembly.GetExecutingAssembly().GetName().Name} v{GetVersion()}";
             List<Thread> threadList = new List<Thread>();
 
@@ -137,11 +142,14 @@ namespace Eva
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls
                                                  | SecurityProtocolType.Tls11
                                                  | SecurityProtocolType.Tls12;
-            try
-            {
-                var authenticatedUser = User.GetAuthenticatedUser(creds);
-                Logger.Log(Logger.Neutral,
-                       $"{authenticatedUser.Name} is connected :\n  ┌──────────────\n  │ScreenName  : @{authenticatedUser.ScreenName}\n  │Desc        : {authenticatedUser.Description.Replace("\n", "")}\n  │Followers   : {authenticatedUser.FollowersCount}\n  └──────────────",
+            var authenticatedUser = User.GetAuthenticatedUser();
+            Logger.Log(Logger.Neutral,
+                       $"{authenticatedUser.Name} is connected :\n"
+                     + $"  ┌──────────────\n"
+                     + $"  │ ScreenName  : @{authenticatedUser.ScreenName}\n"
+                     + $"  │ Desc        : {authenticatedUser.Description.Replace("\n", "")}\n"
+                     + $"  │ Followers   : {authenticatedUser.FollowersCount}\n"
+                     + $"  └──────────────",
                 thread.Name ?? "");
             }
             catch (Exception e)
@@ -187,7 +195,11 @@ namespace Eva
                 foreach (var guild in Client.Guilds)
                 {
                     Logger.Log(Logger.Neutral,
-                               $"  │┌───────────────\n  ││ {guild.Name} \n  ││ Owned by {guild.Owner.Nickname}#{guild.Owner.Discriminator}\n  ││ {guild.MemberCount} members\n  │└───────────────", thread.Name ?? "EvaLogin");
+                               $"  │┌───────────────\n"
+                             + $"  ││ {guild.Name} \n"
+                             + $"  ││ Owned by {guild.Owner.Nickname}#{guild.Owner.Discriminator}\n"
+                             + $"  ││ {guild.MemberCount} members\n"
+                             + $"  │└───────────────", thread.Name ?? "EvaLogin");
                 }           
                 Logger.Log(Logger.Neutral, "  └─", thread.Name ?? "EvaLogin");
                 await SetDefaultStatus(Client);
@@ -444,10 +456,9 @@ namespace Eva
         /// <returns></returns>
         public static string GetVersion()
         {
-        #if DEBUG
-            const string rev = "a";
-        #else
-            const string rev = "b";
+            string rev = $"{(char)(Assembly.GetExecutingAssembly().GetName().Version.Build + 97)}";
+        #if !DEBUG
+            rev += "-r";
         #endif
             return $"{Assembly.GetExecutingAssembly().GetName().Version.Major}.{Assembly.GetExecutingAssembly().GetName().Version.Minor}{rev}";
         }
